@@ -3,8 +3,8 @@ import { Button, FlatList, Text, View } from 'react-native';
 import { useProdukStore } from '../../store/useProdukStore';
 import { useTransaksiStore } from '../../store/useTransaksiStore';
 
-export default function Transaksi() {
-  const { produk, muatData } = useProdukStore();
+export default function TransaksiScreen() {
+  const { produk, muatData } = useProdukStore(); // Ambil produk dari store
   const {
     keranjang,
     tambahKeKeranjang,
@@ -13,28 +13,33 @@ export default function Transaksi() {
   } = useTransaksiStore();
 
   useEffect(() => {
-    muatData();
+    muatData(); // Muat produk dari AsyncStorage
   }, []);
 
   const total = keranjang.reduce((sum, item) => sum + item.harga * item.qty, 0);
 
   return (
-    <View>
-      <Text style={{ fontWeight: 'bold', fontSize: 18 }}>Daftar Produk</Text>
+    <View style={{ padding: 16 }}>
+      <Text style={{ fontWeight: 'bold', fontSize: 18 }}>🛒 Daftar Produk</Text>
       <FlatList
         data={produk}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <Button
-            title={`+ ${item.nama} (Rp ${item.harga})`}
-            onPress={() =>
-              tambahKeKeranjang({ ...item, qty: 1 })
-            }
-          />
+          <View style={{ marginVertical: 6 }}>
+            <Text>{item.nama} - Rp {item.harga}</Text>
+            <Text>Stok: {item.stok}</Text>
+            <Button
+              title="Tambah ke Keranjang"
+              onPress={() =>
+                tambahKeKeranjang({ ...item, qty: 1 })
+              }
+              disabled={item.stok <= 0}
+            />
+          </View>
         )}
       />
 
-      <Text style={{ marginTop: 20, fontWeight: 'bold' }}>Keranjang:</Text>
+      <Text style={{ marginTop: 20, fontWeight: 'bold' }}>🧾 Keranjang:</Text>
       <FlatList
         data={keranjang}
         keyExtractor={(item) => item.id}
@@ -43,8 +48,8 @@ export default function Transaksi() {
         )}
       />
       <Text style={{ marginTop: 10 }}>Total: Rp {total}</Text>
-      <Button title="Simpan Transaksi" onPress={simpanTransaksi} />
-      <Button title="Kosongkan Keranjang" onPress={kosongkanKeranjang} />
+      <Button title="💾 Simpan Transaksi" onPress={simpanTransaksi} />
+      <Button title="🧹 Kosongkan Keranjang" onPress={kosongkanKeranjang} />
     </View>
   );
 }

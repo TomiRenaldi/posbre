@@ -1,50 +1,74 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { nanoid } from 'nanoid/non-secure';
 import { create } from 'zustand';
 
-interface Produk {
+type Produk = {
   id: string;
   nama: string;
   harga: number;
   stok: number;
-}
+};
 
-interface State {
+type ProdukStore = {
   produk: Produk[];
-  tambahProduk: (item: Produk) => void;
-  kurangiStokSetelahTransaksi: (items: { id: string; qty: number }[]) => void;
   muatData: () => Promise<void>;
   simpanData: () => Promise<void>;
-}
+  tambahProduk: (produk: Omit<Produk, 'id'>) => void;
+  editProduk: (id: string, data: Partial<Produk>) => void;
+  hapusProduk: (id: string) => void;
+  kurangiStok: (stokItems: { id: string; qty: number }[]) => void;
+};
 
-export const useProdukStore = create<State>((set, get) => ({
+const PRODUK_KEY = 'produk';
+
+export const useProdukStore = create<ProdukStore>((set, get) => ({
   produk: [],
-  tambahProduk: (item) => {
-    const updated = [...get().produk, item];
-    set({ produk: updated });
-    AsyncStorage.setItem('produk', JSON.stringify(updated));
-  },
-  
-  kurangiStokSetelahTransaksi: (items: { id: string; qty: number }[]) => {
-    const produk = get().produk.map((item) => {
-      const found = items.find((x) => x.id === item.id);
-      if (found) {
-        return {
-          ...item,
-          stok: item.stok - found.qty,
-        };
-      }
-      return item;
-    });
-    set({ produk });
-    AsyncStorage.setItem('produk', JSON.stringify(produk));
-  },
 
   muatData: async () => {
-    const data = await AsyncStorage.getItem('produk');
-    if (data) set({ produk: JSON.parse(data) });
+    const json = await AsyncStorage.getItem(PRODUK_KEY);
+    if (json) set({ produk: JSON.parse(json) });
   },
 
   simpanData: async () => {
-    await AsyncStorage.setItem('produk', JSON.stringify(get().produk));
+    const data = get().produk;
+    await AsyncStorage.setItem(PRODUK_KEY, JSON.stringify(data));
+  },
+
+  tambahProduk: (produkBaru) => {
+  const produkLengkap = { ...produkBaru, id: nanoid() };
+  set((state) => {
+    const produk = [...state.produk, produkLengkap];
+    AsyncStorage.setItem(PRODUK_KEY, JSON.stringify(produk));
+    return { produk };
+  });
+},
+
+  editProduk: (id, data) => {
+  set((state) => {
+    const produk = state.produk.map((p) =>
+      p.id === id ? { ...p, ...data } : p
+    );
+    AsyncStorage.setItem(PRODUK_KEY, JSON.stringify(produk));
+    return { produk };
+  });
+},
+
+  hapusProduk: (id) => {
+  set((state) => {
+    const produk = state.produk.filter((p) => p.id !== id);
+    AsyncStorage.setItem(PRODUK_KEY, JSON.stringify(produk));
+    return { produk };
+  });
+},
+
+  kurangiStok: (stokItems) => {
+    const produk = get().produk.map((p) => {
+      const stokItem = stokItems.find((item) => item.id === p.id);
+      if (stokItem) {
+        return { ...p, stok: p.stok - stokItem.qty };
+      }
+      return p;
+    });
+    set({ produk });
   },
 }));
